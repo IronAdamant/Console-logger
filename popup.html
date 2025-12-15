@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Console Logger</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header / Tab Info -->
+        <header>
+            <div id="tabInfo" class="tab-info" title="Current Active Tab">
+                Loading tab info...
+            </div>
+            <div id="status" class="status-bar">Ready</div>
+        </header>
+
+        <!-- Controls -->
+        <div class="controls">
+            <div class="btn-group">
+                <button id="startBtn" class="btn btn-primary">Start Capturing</button>
+                <button id="stopBtn" class="btn btn-danger" disabled>Stop</button>
+            </div>
+
+            <div class="settings-group">
+                <label class="setting-row">
+                    <input type="checkbox" id="autoSaveCheckbox">
+                    <span>Enable Auto-Save</span>
+                </label>
+                
+                <div class="input-row">
+                    <label for="intervalInput">Interval (s):</label>
+                    <input type="number" id="intervalInput" min="5" value="30">
+                </div>
+                
+                <div class="input-row">
+                    <label for="filenameInput">Filename:</label>
+                    <input type="text" id="filenameInput" value="console-logs.txt">
+                </div>
+            </div>
+
+            <div class="btn-group secondary">
+                <button id="saveBtn" class="btn btn-secondary">Save Now</button>
+                <button id="clearBtn" class="btn btn-danger-outline">Clear Logs</button>
+            </div>
+        </div>
+
+        <!-- Log Display -->
+        <div class="log-container">
+            <pre id="logDisplay"></pre>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
