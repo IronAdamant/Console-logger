@@ -1,6 +1,12 @@
 # Console Logger - Browser Extension
 
+[![Open Source](https://img.shields.io/badge/Open%20Source-MIT-green.svg)](https://github.com/IronAdamant/Console-logger)
+[![GitHub Release](https://img.shields.io/github/v/release/IronAdamant/Console-logger?include_prereleases)](https://github.com/IronAdamant/Console-logger/releases)
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Coming%20Soon-blue.svg)](#installation)
+
 A powerful Chromium browser extension that captures JavaScript console messages (log, warn, error, info) from any active tab, displays them live, and automatically saves them to a text file.
+
+> 🔓 **100% Open Source** — Inspect the code yourself on [GitHub](https://github.com/IronAdamant/Console-logger)
 
 ## 🚀 Key Features
 
