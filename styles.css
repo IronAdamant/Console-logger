@@ -87,28 +87,38 @@ header {
     background-color: var(--accent-color);
     color: white;
 }
-.btn-primary:hover:not(:disabled) { background-color: var(--accent-hover); }
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--accent-hover);
+}
 
 .btn-danger {
     background-color: var(--danger-color);
     color: white;
 }
-.btn-danger:hover:not(:disabled) { background-color: var(--danger-hover); }
+
+.btn-danger:hover:not(:disabled) {
+    background-color: var(--danger-hover);
+}
 
 .btn-secondary {
     background-color: var(--secondary-bg);
     color: var(--text-color);
     border: 1px solid var(--border-color);
 }
-.btn-secondary:hover:not(:disabled) { background-color: var(--border-color); }
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--border-color);
+}
 
 .btn-danger-outline {
     background-color: transparent;
     color: var(--danger-color);
     border: 1px solid var(--danger-color);
 }
-.btn-danger-outline:hover:not(:disabled) { 
-    background-color: rgba(239, 68, 68, 0.1); 
+
+.btn-danger-outline:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.1);
 }
 
 .settings-group {
@@ -133,7 +143,8 @@ header {
     justify-content: space-between;
 }
 
-input[type="number"], input[type="text"] {
+input[type="number"],
+input[type="text"] {
     background-color: var(--log-bg);
     border: 1px solid var(--border-color);
     color: var(--text-color);
@@ -160,8 +171,53 @@ input[type="number"], input[type="text"] {
 }
 
 /* Log Level Colors */
-.log-line { margin-bottom: 2px; display: block; }
-.log-level-INFO { color: var(--log-info); }
-.log-level-WARN, .log-level-WARNING { color: var(--log-warn); }
-.log-level-ERROR { color: var(--log-error); }
-.log-level-LOG { color: var(--log-log); }
+.log-line {
+    margin-bottom: 2px;
+    display: block;
+}
+
+.log-level-INFO {
+    color: var(--log-info);
+}
+
+.log-level-WARN,
+.log-level-WARNING {
+    color: var(--log-warn);
+}
+
+.log-level-ERROR {
+    color: var(--log-error);
+}
+
+.log-level-LOG {
+    color: var(--log-log);
+}
+
+/* Save Location */
+.save-location-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: var(--accent-color);
+    border: 1px solid var(--accent-color);
+    flex: none;
+    width: 100%;
+}
+
+.btn-outline:hover:not(:disabled) {
+    background-color: rgba(59, 130, 246, 0.1);
+}
+
+.save-path-display {
+    font-size: 10px;
+    color: #6b7280;
+    word-break: break-all;
+    line-height: 1.3;
+}

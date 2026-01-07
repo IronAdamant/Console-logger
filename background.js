@@ -16,6 +16,7 @@ let currentFilename = 'console-logs.txt';
 let saveIntervalSeconds = 30;
 let autoSaveEnabled = false;
 let lastSavedLength = 0; // Track optimization for auto-save
+let savedPath = ''; // User's last saved path (for display)
 
 // --- Initialization ---
 
@@ -27,7 +28,8 @@ chrome.runtime.onInstalled.addListener(async () => {
             filename: 'console-logs.txt',
             interval: 30,
             autoSave: false,
-            isCapturing: false
+            isCapturing: false,
+            savePath: '' // User's last saved path
         }
     });
     console.log("Console Logger installed and initialized.");
@@ -39,6 +41,7 @@ chrome.storage.local.get(['settings'], (result) => {
         currentFilename = result.settings.filename || 'console-logs.txt';
         saveIntervalSeconds = result.settings.interval || 30;
         autoSaveEnabled = result.settings.autoSave || false;
+        savedPath = result.settings.savePath || '';
 
         // Note: capturedTabId is lost on service worker termination,
         // so we check if we're still attached to anything via debugger API query
@@ -280,6 +283,10 @@ async function saveLogs() {
     // Using data URL is safer for specific worker contexts.
     reader.onload = function () {
         const url = reader.result;
+        // Note: Chrome's filename param only works within Downloads folder.
+        // If user has set a custom path (outside Downloads), we save there 
+        // by simply using the filename - Chrome remembers Last Used folder
+        // when saveAs was used, but for auto-save we use Downloads folder.
         chrome.downloads.download({
             url: url,
             filename: currentFilename,
@@ -367,7 +374,77 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                     // Update alarm
                     updateAlarm();
-                    sendResponse({ success: true });
+                    sendResponse({ success: true, savePath: savedPath });
+                    break;
+
+                case 'setSaveLocation':
+                    // Trigger a save with saveAs: true to let user pick location
+                    // Then capture the resulting path
+                    const logs = (await chrome.storage.local.get(['logs'])).logs || [];
+                    if (logs.length === 0) {
+                        // Create a placeholder file so user can pick location
+                        const placeholder = '[Console Logger will save logs here]';
+                        const blob = new Blob([placeholder], { type: 'text/plain' });
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                            chrome.downloads.download({
+                                url: reader.result,
+                                filename: currentFilename,
+                                saveAs: true
+                            }, (downloadId) => {
+                                if (downloadId && !chrome.runtime.lastError) {
+                                    // Listen for the download to complete to get the path
+                                    chrome.downloads.search({ id: downloadId }, (items) => {
+                                        if (items && items[0] && items[0].filename) {
+                                            const fullPath = items[0].filename;
+                                            // Extract directory from full path
+                                            const lastSlash = Math.max(fullPath.lastIndexOf('/'), fullPath.lastIndexOf('\\'));
+                                            const directory = lastSlash > 0 ? fullPath.substring(0, lastSlash) : '';
+                                            savedPath = directory;
+                                            updateSettingsState({ savePath: directory });
+                                            sendResponse({ success: true, savePath: directory, fullPath: fullPath });
+                                        } else {
+                                            sendResponse({ success: false, error: 'Could not get path' });
+                                        }
+                                    });
+                                } else {
+                                    sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Cancelled' });
+                                }
+                            });
+                        };
+                        reader.readAsDataURL(blob);
+                    } else {
+                        // Save existing logs with saveAs
+                        const fileContent = logs.join('\n');
+                        const blob = new Blob([fileContent], { type: 'text/plain' });
+                        const reader = new FileReader();
+                        reader.onload = function () {
+                            chrome.downloads.download({
+                                url: reader.result,
+                                filename: currentFilename,
+                                saveAs: true
+                            }, (downloadId) => {
+                                if (downloadId && !chrome.runtime.lastError) {
+                                    chrome.downloads.search({ id: downloadId }, (items) => {
+                                        if (items && items[0] && items[0].filename) {
+                                            const fullPath = items[0].filename;
+                                            const lastSlash = Math.max(fullPath.lastIndexOf('/'), fullPath.lastIndexOf('\\'));
+                                            const directory = lastSlash > 0 ? fullPath.substring(0, lastSlash) : '';
+                                            savedPath = directory;
+                                            updateSettingsState({ savePath: directory });
+                                            lastSavedLength = logs.length;
+                                            sendResponse({ success: true, savePath: directory, fullPath: fullPath });
+                                        } else {
+                                            sendResponse({ success: false, error: 'Could not get path' });
+                                        }
+                                    });
+                                } else {
+                                    sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Cancelled' });
+                                }
+                            });
+                        };
+                        reader.readAsDataURL(blob);
+                    }
                     break;
 
                 default:

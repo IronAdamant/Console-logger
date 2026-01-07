@@ -13,7 +13,9 @@ const ui = {
     filename: document.getElementById('filenameInput'),
     saveBtn: document.getElementById('saveBtn'),
     clearBtn: document.getElementById('clearBtn'),
-    logDisplay: document.getElementById('logDisplay')
+    logDisplay: document.getElementById('logDisplay'),
+    setLocationBtn: document.getElementById('setLocationBtn'),
+    savePathDisplay: document.getElementById('savePathDisplay')
 };
 
 let capturedTabId = null;
@@ -51,6 +53,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     ui.filename.value = settings.filename || 'console-logs.txt';
     ui.interval.value = settings.interval || 30;
     ui.autoSave.checked = settings.autoSave || false;
+
+    // Display save path
+    updateSavePathDisplay(settings.savePath);
 
     // Restore capture state based on specific tab
     // Ideally we check if *this* tab is the captured one, but background handles single capture.
@@ -138,6 +143,24 @@ ui.clearBtn.addEventListener('click', async () => {
     }
 });
 
+// 5. Set Save Location
+ui.setLocationBtn.addEventListener('click', async () => {
+    ui.status.textContent = "Choose save location...";
+    ui.setLocationBtn.disabled = true;
+
+    const response = await chrome.runtime.sendMessage({ action: 'setSaveLocation' });
+
+    ui.setLocationBtn.disabled = false;
+    if (response.success) {
+        updateSavePathDisplay(response.savePath);
+        ui.status.textContent = "Save location set!";
+        setTimeout(() => ui.status.textContent = "Ready", 2000);
+    } else {
+        ui.status.textContent = response.error || "Cancelled";
+        setTimeout(() => ui.status.textContent = "Ready", 2000);
+    }
+});
+
 // --- Live Updates ---
 
 // Listen for new logs from background
@@ -166,6 +189,18 @@ function setCapturingState(isCapturing) {
 function toggleIntervalInput(enabled) {
     ui.interval.disabled = !enabled;
     ui.interval.style.opacity = enabled ? "1" : "0.5";
+}
+
+function updateSavePathDisplay(path) {
+    if (path && path.length > 0) {
+        // Shorten long paths for display
+        const displayPath = path.length > 50 ? '...' + path.slice(-47) : path;
+        ui.savePathDisplay.textContent = `Saving to: ${displayPath}`;
+        ui.savePathDisplay.title = path; // Full path on hover
+    } else {
+        ui.savePathDisplay.textContent = 'Default (Downloads folder)';
+        ui.savePathDisplay.title = '';
+    }
 }
 
 function renderLogs(logs) {

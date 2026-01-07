@@ -14,9 +14,20 @@ A powerful Chromium browser extension that captures JavaScript console messages 
 - **Deep Object Logging**: Captures nested objects, arrays, and stack traces — not just string representations.
 - **Live Monitoring**: Real-time display of logs in the popup window.
 - **Auto-Save**: Periodically saves captured logs to your Downloads folder without prompting.
+- **Custom Save Location**: Choose where to save your logs with a file picker.
 - **Smart Overwrite**: Updates the same file (`console-logs.txt`) continuously, preventing file clutter.
 - **Persistent Storage**: Logs are stored locally and survive browser restarts.
 - **Cross-Platform**: Works on Windows, macOS, and Linux.
+
+---
+
+## 📸 Screenshots
+
+### Extension Popup
+![Extension popup showing live console capture](images/screenshot-popup.png)
+
+### Captured Log Output
+![Log file output in VS Code](images/screenshot-logs.png)
 
 ---
 
@@ -68,13 +79,20 @@ Since this is a developer tool, you install it as an "unpacked" extension.
 4. The extension will silently overwrite this file in your Downloads folder.
    - *Tip*: Open the file in VS Code or similar to see live updates.
 
-### 4. Important Usage Note
+### 4. Set Custom Save Location
+1. Click **"Set Save Location"** to open a file picker.
+2. Choose your preferred folder and filename.
+3. The extension will display where logs are being saved.
+4. **Note**: The custom path is shown for reference. Due to browser security, "Save Now" and auto-save go to Downloads, but you can use "Set Save Location" anytime to save directly to your chosen location.
+
+### 5. Important Usage Note
 - **Restricted Pages**: You cannot capture logs from browser internal pages (`chrome://`, `edge://`, `about:`, etc.).
   - *Symptom*: Warning message in the popup.
   - *Fix*: Navigate to a normal website and try again.
 
-### 5. Manual Controls
+### 6. Manual Controls
 - **Save Now**: Immediately downloads the current log history.
+- **Set Save Location**: Opens file picker to choose where to save logs.
 - **Clear Logs**: Wipes the in-memory log history.
 - **Stop**: Detaches the debugger.
 
