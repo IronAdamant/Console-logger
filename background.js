@@ -1,7 +1,14 @@
 /**
  * Background Service Worker for Console Logger
  * Handles debugger attachment, log capture, storage, and file downloads.
+ * 
+ * Uses Runtime.consoleAPICalled (not deprecated Console domain) for deep logging.
  */
+
+// --- Configuration ---
+const MAX_OBJECT_DEPTH = 10; // Configurable depth for object serialization
+const MAX_ARRAY_ITEMS = 100; // Max array items to serialize
+const MAX_STRING_LENGTH = 10000; // Truncate very long strings
 
 // --- State Variables ---
 let capturedTabId = null;
@@ -56,7 +63,8 @@ async function attachDebugger(tabId) {
 
     try {
         await chrome.debugger.attach({ tabId: tabId }, '1.3');
-        await chrome.debugger.sendCommand({ tabId: tabId }, 'Console.enable');
+        // Use Runtime domain (not deprecated Console) for deeper logging
+        await chrome.debugger.sendCommand({ tabId: tabId }, 'Runtime.enable');
         capturedTabId = tabId;
 
         await updateSettingsState({ isCapturing: true });
@@ -96,9 +104,9 @@ async function detachDebugger() {
 chrome.debugger.onEvent.addListener(async (source, method, params) => {
     if (source.tabId !== capturedTabId) return;
 
-    if (method === 'Console.messageAdded') {
-        const msg = params.message;
-        await appendLog(msg);
+    // Runtime.consoleAPICalled provides deeper object data than Console.messageAdded
+    if (method === 'Runtime.consoleAPICalled') {
+        await appendLog(params);
     }
 });
 
@@ -116,26 +124,115 @@ chrome.debugger.onDetach.addListener(async (source, reason) => {
 // --- Log Management ---
 
 /**
- * Formats and appends a log message to storage.
+ * Serializes a RemoteObject to a readable string with configurable depth.
  */
-async function appendLog(msg) {
-    // Format timestamp
-    const timestamp = new Date().toISOString();
-    const level = (msg.level || 'INFO').toUpperCase();
-    const text = msg.text || '';
+function serializeRemoteObject(obj, depth = 0) {
+    if (depth > MAX_OBJECT_DEPTH) return '[Max depth exceeded]';
+    if (!obj) return 'undefined';
 
-    // Format: [TIMESTAMP] [LEVEL] Message
-    const logLine = `[${timestamp}] [${level}] ${text}`;
+    const type = obj.type;
+    const subtype = obj.subtype;
+
+    // Primitives
+    if (type === 'string') {
+        const val = obj.value || '';
+        return val.length > MAX_STRING_LENGTH
+            ? val.substring(0, MAX_STRING_LENGTH) + '...[truncated]'
+            : val;
+    }
+    if (type === 'number' || type === 'boolean') return String(obj.value);
+    if (type === 'undefined') return 'undefined';
+    if (type === 'symbol') return obj.description || 'Symbol()';
+    if (subtype === 'null') return 'null';
+
+    // Functions
+    if (type === 'function') {
+        return obj.description || '[Function]';
+    }
+
+    // Objects with preview (provides nested structure)
+    if (obj.preview) {
+        return serializeObjectPreview(obj.preview, depth);
+    }
+
+    // Fallback to description
+    return obj.description || `[${type}]`;
+}
+
+/**
+ * Serializes an ObjectPreview with full property enumeration.
+ */
+function serializeObjectPreview(preview, depth = 0) {
+    if (depth > MAX_OBJECT_DEPTH) return '[Max depth exceeded]';
+    if (!preview) return '{}';
+
+    const subtype = preview.subtype;
+    const properties = preview.properties || [];
+
+    // Arrays
+    if (subtype === 'array') {
+        const items = properties.slice(0, MAX_ARRAY_ITEMS).map(prop => {
+            if (prop.valuePreview) {
+                return serializeObjectPreview(prop.valuePreview, depth + 1);
+            }
+            return prop.value !== undefined ? String(prop.value) : prop.type;
+        });
+        const suffix = properties.length > MAX_ARRAY_ITEMS ? ', ...' : '';
+        return `[${items.join(', ')}${suffix}]`;
+    }
+
+    // Regular objects
+    const pairs = properties.map(prop => {
+        let value;
+        if (prop.valuePreview) {
+            value = serializeObjectPreview(prop.valuePreview, depth + 1);
+        } else {
+            value = prop.value !== undefined ? JSON.stringify(prop.value) : prop.type;
+        }
+        return `${prop.name}: ${value}`;
+    });
+
+    const overflow = preview.overflow ? ', ...' : '';
+    return `{${pairs.join(', ')}${overflow}}`;
+}
+
+/**
+ * Formats a stack trace from Runtime.consoleAPICalled.
+ */
+function formatStackTrace(stackTrace) {
+    if (!stackTrace || !stackTrace.callFrames || stackTrace.callFrames.length === 0) {
+        return '';
+    }
+
+    // Format top frame (most relevant)
+    const frame = stackTrace.callFrames[0];
+    const funcName = frame.functionName || '(anonymous)';
+    const location = `${frame.url}:${frame.lineNumber + 1}:${frame.columnNumber + 1}`;
+    return `\n    at ${funcName} (${location})`;
+}
+
+/**
+ * Formats and appends a log message to storage.
+ * Uses Runtime.consoleAPICalled params for deep serialization.
+ */
+async function appendLog(params) {
+    const timestamp = new Date().toISOString();
+    const level = (params.type || 'log').toUpperCase();
+
+    // Serialize all arguments with deep object support
+    const args = (params.args || []).map(arg => serializeRemoteObject(arg));
+    const message = args.join(' ');
+
+    // Build log line with optional stack trace
+    let logLine = `[${timestamp}] [${level}] ${message}`;
+    logLine += formatStackTrace(params.stackTrace);
 
     // Get existing logs and append
-    // Optimization: In a high-volume production ext, we'd batch these.
-    // For this assignment, simple append is capable enough.
     const result = await chrome.storage.local.get(['logs']);
     const logs = result.logs || [];
     logs.push(logLine);
 
-    // Limit log size to prevent storage quota issues (optional but good practice)
-    // 5MB limit ~ appx 50,000 lines. Let's keep last 10,000 to be safe.
+    // Limit log size to prevent storage quota issues
     if (logs.length > 10000) {
         logs.splice(0, logs.length - 10000);
     }
