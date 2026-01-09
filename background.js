@@ -97,6 +97,8 @@ async function detachDebugger() {
     const wasTab = capturedTabId;
     capturedTabId = null;
     await updateSettingsState({ isCapturing: false });
+    // Clear auto-save alarm when capture stops
+    chrome.alarms.clear('autoSave');
     console.log(`Detached debugger from tab ${wasTab}`);
     return { success: true };
 }
@@ -320,7 +322,12 @@ function updateAlarm() {
 // Handle Alarm trigger
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'autoSave') {
-        saveLogs();
+        // Only auto-save if capture is currently active
+        if (capturedTabId !== null) {
+            saveLogs();
+        } else {
+            console.log('Auto-save skipped: No active capture session.');
+        }
     }
 });
 
